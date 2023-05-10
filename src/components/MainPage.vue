@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import Header from './Header.vue'
+import axios from 'axios';
 
-const value = ref('')
+const promptText = ref('')
 const features = [
   {
     imageSrc: 'promo-sort.png',
@@ -25,6 +26,20 @@ const features = [
     text: 'Сортирует материал в удобный читаемый вид'
   },
 ]
+
+// onMounted(() {
+//   const res = axios.post('http://localhost:3000/prompt-text', {
+//     text: 
+//   })
+// })
+
+const handleSumbmit = async () => {
+  console.log('Text', promptText.value)
+  const res = await axios.post('http://localhost:3000/prompt-text', {
+    text: promptText.value
+  })
+  console.log(res?.data?.content)
+}
 </script>
 
 <template>
@@ -44,15 +59,21 @@ const features = [
       </div>
 
       <el-input
-        v-model="value"
+        v-model="promptText"
         class="prompt-input"
         placeholder="Insert text to convert"
         type="textarea"
+        autofocus
         :autosize="{ minRows: 3, maxRows: 4 }"
       />
       
       <div class="prompt-wrapper">
-        <el-button class="submit-prompt" type="primary" round >
+        <el-button
+          class="submit-prompt"
+          @click="handleSumbmit"
+          type="primary"
+          round
+        >
           Convert
         </el-button>
       </div>
