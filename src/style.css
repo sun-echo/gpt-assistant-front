@@ -1,0 +1,38 @@
+@font-face {
+  font-family: RF-Text-Bold;
+  src: url("../fonts/RFDewiExtended-Black.ttf") format("truetype");  
+}
+
+@font-face {
+  font-family: RF-Headline;
+  src: url("../fonts/RFDewiExpanded-Bold.ttf") format("truetype");  
+}
+
+@font-face {
+  font-family: RF-Text;
+  src: url("../fonts/RFDewiExtended-Semibold.ttf") format('truetype');  
+}
+
+:root {
+  font-family: "RF-Text", Arial;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  text-align: center;
+}
+
+* {
+  box-sizing: border-box;
+}
