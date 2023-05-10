@@ -100,6 +100,7 @@ const features = [
   align-items: center;
   justify-content: center;
   margin-bottom: 120px;
+  user-select: none;
 }
 .feature-wrapper {
   display: flex;
