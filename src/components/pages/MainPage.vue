@@ -1,7 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import Header from './Header.vue'
-import axios from 'axios';
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useStore } from '../../store/index.ts'
+import Header from '../Header.vue';
+import PageWrapper from '../PageWrapper.vue';
+// import axios from 'axios';
+
+const router = useRouter()
+const store = useStore()
 
 const promptText = ref('')
 const features = [
@@ -33,62 +39,64 @@ const features = [
 //   })
 // })
 
-const handleSumbmit = async () => {
-  console.log('Text', promptText.value)
-  const res = await axios.post('http://localhost:3000/prompt-text', {
-    text: promptText.value
-  })
-  console.log(res?.data?.content)
+// const handleSubmit = async () => {
+//   console.log('Text', promptText.value)
+//   const res = await axios.post('http://localhost:3000/prompt-text', {
+//     text: promptText.value
+//   })
+//   console.log(res?.data?.content)
+// }
+
+const handleSubmit = () => {
+  store.$state.promptText = promptText.value
+
+  router.push({ name: 'EditorPage' })
+
+  console.log('Push')
 }
 </script>
 
 <template>
-  <div class="page-wrapper">
+  <PageWrapper>
     <Header />
+    <el-main>
+      <div class="content-wrapper">
+        <h1>
+          Unlimited clear information<br/>from any source
+        </h1>
 
-    <div class="content-wrapper">
-      <h1>
-        Unlimited clear information<br/>from any source
-      </h1>
+        <div class="features">
+          <div class="feature-wrapper" v-for="feature in features">
+            <img :src="feature.imageSrc" />
+            <span>{{  feature.text }}</span>
+          </div>
+        </div>
 
-      <div class="features">
-        <div class="feature-wrapper" v-for="feature in features">
-          <img :src="feature.imageSrc" />
-          <span>{{  feature.text }}</span>
+        <el-input
+          v-model="promptText"
+          class="prompt-input"
+          placeholder="Insert text to convert"
+          type="textarea"
+          autofocus
+          :autosize="{ minRows: 3, maxRows: 4 }"
+        />
+        
+        <div class="prompt-wrapper">
+          <el-button
+            class="submit-prompt"
+            @click="handleSubmit"
+            type="primary"
+            round
+          >
+            Convert
+          </el-button>
         </div>
       </div>
-
-      <el-input
-        v-model="promptText"
-        class="prompt-input"
-        placeholder="Insert text to convert"
-        type="textarea"
-        autofocus
-        :autosize="{ minRows: 3, maxRows: 4 }"
-      />
-      
-      <div class="prompt-wrapper">
-        <el-button
-          class="submit-prompt"
-          @click="handleSumbmit"
-          type="primary"
-          round
-        >
-          Convert
-        </el-button>
-      </div>
-    </div>
-  </div>
+    </el-main>
+  </PageWrapper>
 </template>
 
 <style scoped lang="scss">
-.page-wrapper {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  align-items: center;
-}
 .content-wrapper {
   width: 100%;
   height: 100%;
