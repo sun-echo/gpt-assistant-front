@@ -283,7 +283,7 @@ const handleInputPrompt = (key: number, value: any) => {
     } else if (needToSplit) {
       const splittedValue = value?.split('\n')?.filter((item: string) => !isEmpty(item))
       inputData.value.pop()
-      inputData.value.splice(key, splittedValue.length, ...splittedValue);
+      inputData.value.splice(key, 1, ...splittedValue);
 
       if (activeInputIndex.value !== null) {
         hideTooltip(activeInputIndex.value)
