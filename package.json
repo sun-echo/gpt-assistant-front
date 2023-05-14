@@ -12,6 +12,7 @@
     "@element-plus/icons-vue": "^2.1.0",
     "axios": "^1.4.0",
     "element-plus": "^2.3.4",
+    "lodash": "^4.17.21",
     "path": "^0.12.7",
     "pinia": "^2.0.36",
     "vue": "^3.2.47",

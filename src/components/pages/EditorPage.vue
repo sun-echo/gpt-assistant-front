@@ -6,7 +6,7 @@
         <div class="editor__left">
         <div
           class="prompt-input-wrapper"
-          v-for="(promptInput, key) in promptInputData"
+          v-for="(promptInput, key) in inputData"
         >
           <el-input
             v-if="loadingInputIndex !== key"
@@ -26,10 +26,11 @@
 
           <el-dropdown
             :ref="el => promptTooltipRefs[key] = el"
-            trigger="contextmenu"
+            trigger="click"
             placement="bottom-start"
             class="input-tooltip"
             @command="val => handleClickAction(key, val)"
+            @visible-change="val => handleChangeVisibleTooltip(key, val)"
           >
             <div/>
             <template #dropdown>
@@ -200,10 +201,10 @@
 import {
   ref,
   onMounted,
-  watchEffect,
   computed,
   nextTick
 } from 'vue'
+import isEmpty from 'lodash/isEmpty'
 import { useStore } from '../../store/index.ts'
 import Header from '../Header.vue'
 import PageWrapper from '../PageWrapper.vue';
@@ -214,119 +215,165 @@ import type { DropdownInstance } from 'element-plus'
 
 const store = useStore()
 
-const promptInputData = ref([store.$state.promptText])
-const promptInputRefs = ref<any>([])
-const inputValue = computed(() => promptInputData.value?.join('\n'))
+const inputData = ref([store.$state.promptText])
+const promptValue = computed(() => inputData.value?.join('\n'))
+
 const loadingInputIndex = ref()
+const activeInputIndex = ref<number|null>(0)
+
+const promptInputRefs = ref<any>([])
+const promptTooltipRefs = ref<DropdownInstance[]>([]);
 
 const activeStyle = ref(0)
 const stylizeResult = ref<string|null>(null)
-
 const loadingStylize = ref(false)
 
 const fileInputElement = ref<HTMLInputElement|null>(null);
 const fileInputValue = ref<HTMLInputElement|null>(null);
 // const promptInput = ref<HTMLInputElement|null>(null);
-const promptTooltipRefs = ref<DropdownInstance[]>([]);
 
 // const fileName = computed(() => fileInputValue.value?.name);
 // const fileExtension = computed(() => fileName.value?.substr(fileName.value?.lastIndexOf(".") + 1));
 // const fileMimeType = computed(() => fileInputValue.value?.type);
 // const fileSelected = computed(() => !!fileName.value)
 
-
-watchEffect(() => {
-  if (promptInputData.value[0]?.length > 0) {
-    promptTooltipRefs.value[0]?.handleClose()
-  }
-  
-  promptInputData.value?.forEach((item, index) => {
-    if (item.includes('\n')) {
-      console.log("Found Enter on", index)
-    }
-  })
-})
-
-// TODO: Починить блюр. При наведении на дропдаун срабатывает
-
 const handleBlurInput = (key: number) => {
-//   console.log('Debug')
-//   const val = promptInputData.value[key]
-//   promptTooltipRefs.value[key]?.handleClose()
-//   console.log('Blur', key, val)
-//   if (
-//     promptInputData.value?.filter(item => item === '').length > 0 &&
-//     val === '' &&
-//     promptInputData.value?.length > 1
-//   ) {
-//     if (key === promptInputData.value?.length - 1) {
-//       // promptInputData.value = promptInputData.value?.filter(item => item !== '')
-//     } else {
-//       console.log('Gotcha')
-//       promptInputData.value?.splice(key, 1)
-//       promptInputData.value?.push('')
-//     }
-//   }
+  const value = inputData.value[key]
+
+  if (activeInputIndex.value !== key) {
+    hideTooltip(key)
+  }
+
+  const emptyInputs = inputData.value?.filter(item => item === '')
+
+  if (
+    !isEmpty(emptyInputs) &&
+    isEmpty(value) &&
+    inputData.value?.length > 1 &&
+    key !== inputData.value?.length - 1
+  ) {
+    hideTooltip(key)
+    inputData.value?.splice(key, 1)
+    inputData.value?.push('')
+  }
+
+  activeInputIndex.value = null
 }
 
 const handleFocusInput = (key: number) => {
-  if (promptInputData.value[key] === '') {
+  if (
+    isEmpty(inputData.value[key]) &&
+    activeInputIndex.value !== key
+  ) {
     showTooltip(key)
   }
+
+  activeInputIndex.value = key
 }
 
 const handleInputPrompt = (key: number, value: any) => {
-  const isEnter = value === '\n'
-  const containsEnter = value.includes('\n')
+  const containsLinebreak = value.includes('\n')
+  const linebreakPosition = value?.indexOf('\n')
+  const needToSplit = linebreakPosition !== value?.length - 1
 
-  if (containsEnter && !promptInputData.value?.includes('')) {
-    promptInputData.value.push('')
-    nextTick(() => promptInputRefs.value[key+1]?.focus())
+  if (containsLinebreak) {
+    if (!inputData.value?.includes('')) {
+      inputData.value.push('')
+      nextTick(() => promptInputRefs.value[key + 1]?.focus())
+    } else if (needToSplit) {
+      const splittedValue = value?.split('\n')?.filter((item: string) => !isEmpty(item))
+      inputData.value.pop()
+      inputData.value.splice(key, splittedValue.length, ...splittedValue);
+
+      if (activeInputIndex.value !== null) {
+        hideTooltip(activeInputIndex.value)
+        handleFocusInput(inputData.value?.length - 1)
+      }   
+    } else {
+      // Handling onEnter in not empty input, when next field is not empty
+      if (!!inputData.value[key + 1] && !isEmpty(inputData.value[key])) {
+        inputData.value.pop()
+        inputData.value.splice(key + 1, 0, '');
+      }
+      nextTick(() => promptInputRefs.value[key+1]?.focus())
+    }
   } else {
-    if (containsEnter) {
-      // On enter in not empty input, when next field is not empty
-      if (!!promptInputData.value[key+1] && promptInputData.value[key] !== '') {
-        promptInputData.value.pop()
-        promptInputData.value.splice(key+1, 0, '');
+    inputData.value[key] = value
+    hideTooltip(key)
+  }
+
+  if (containsLinebreak && !inputData.value?.includes('')) {
+    inputData.value.push('')
+    nextTick(() => promptInputRefs.value[key + 1]?.focus())
+  } else {
+    if (containsLinebreak) {
+      if (
+        !!inputData.value[key + 1] &&
+        !isEmpty(inputData.value[key])
+      ) {
+        inputData.value.pop()
+        inputData.value.splice(key + 1, 0, '');
         nextTick(() => promptInputRefs.value[key+1]?.focus())
       } else {
-      // On enter emty field
         nextTick(() => promptInputRefs.value[key+1]?.focus())
       }
     } else {
-      promptInputData.value[key] = value
-      promptTooltipRefs.value[key]?.handleClose()
+      inputData.value[key] = value
+      hideTooltip(key)
     }
   }
 
-  if (promptInputData.value?.filter(item => item === '')?.length > 1) {
-    promptInputData.value = promptInputData.value?.filter(item => item !== '')
+  const moreThanOneInputEmpty = inputData.value?.filter(item => isEmpty(item))?.length > 1
+  const noEmptyInputs = isEmpty(inputData.value?.filter(item => isEmpty(item)))
+
+  if (moreThanOneInputEmpty) {
+    const filteredValue = inputData.value?.filter(item => !isEmpty(item))
+    inputData.value = [...filteredValue, '']
   }
 
-  if (promptInputData.value?.filter(item => item === '')?.length === 0) {
-    promptInputData.value.push('')
+  if (noEmptyInputs) {
+    inputData.value.push('')
   }
 }
 
 function showTooltip(key: number) {
-  if (!promptTooltipRefs.value[key]) return
+  if (!promptTooltipRefs.value[key]) {
+    return
+  }
   promptTooltipRefs.value[key]?.handleOpen()
+}
+
+const handleChangeVisibleTooltip = (_key: number, value: boolean) => {
+  if (value) {
+    return
+  }
+
+  const emptyIndex = inputData.value?.indexOf('')
+  if (emptyIndex > 0 && emptyIndex !== inputData.value?.length - 1) {
+    inputData.value?.splice(emptyIndex, 1)
+    inputData.value?.push('')
+  }
+}
+
+function hideTooltip(key: number) {
+  if (!promptTooltipRefs.value[key]) {
+    return
+  }
+  promptTooltipRefs.value[key]?.handleClose()
 }
 
 onMounted(() => {
   showTooltip(0)
 })
 
-const submitButtonDisabled = computed(() => !inputValue.value || loadingStylize.value)
+const submitButtonDisabled = computed(() => !promptValue.value || loadingStylize.value)
 
 const uploadFile = (event: any) => {
-  console.log('Debug', event?.target?.files[0])
   fileInputValue.value = event?.target?.files[0];
 };
 
 const handleClickAction = async (key: number, comand: string) => {
-  console.log('Click', comand)
-  if (!inputValue.value) {
+  if (!promptValue.value) {
     return
   }
 
@@ -340,19 +387,17 @@ const handleClickAction = async (key: number, comand: string) => {
 }
 
 const continueWriting = async (key: number) => {
-  if (!inputValue.value) {
+  if (!promptValue.value) {
     return
   }
 
   const res = await axios.post('http://localhost:3000/prompt-text', {
-    text: `Continue the text: ${inputValue.value}`
+    text: `Continue the text: ${promptValue.value}`
   })
 
-  promptInputData.value[key] = res?.data?.content
+  inputData.value[key] = res?.data?.content
 
-  console.log('Debug handle', promptInputRefs.value[key], key)
-
-  promptInputData.value.push('')
+  inputData.value.push('')
   nextTick(() => promptInputRefs.value[promptInputRefs.value - 1]?.focus())
 }
 
@@ -364,8 +409,8 @@ const handleClickGenerate = async () => {
 
   // if (activeStyle.value === 0) {
   //   const res = await axios.post('http://localhost:3000/prompt-text', {
-  //     // text: `Fix mistakes in text: ${inputValue.value}. ${additionalValue.value ? '. ' + additionalValue.value : '' }`
-  //     text: `Не меняя текст, исправь орфографические и пунктуационные ошибки: ${inputValue.value}. ${additionalValue.value ? '. ' + additionalValue.value : '' }`
+  //     // text: `Fix mistakes in text: ${promptValue.value}. ${additionalValue.value ? '. ' + additionalValue.value : '' }`
+  //     text: `Не меняя текст, исправь орфографические и пунктуационные ошибки: ${promptValue.value}. ${additionalValue.value ? '. ' + additionalValue.value : '' }`
   //   })
 
   //   stylizeResult.value = res?.data?.content
