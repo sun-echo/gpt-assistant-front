@@ -11,7 +11,8 @@ import EditorPage from './components/pages/EditorPage.vue'
 
 
 // TODO: 
-// Разделение текста при нажатии Enter внутри текста
+// Fix focus input bug after hoverdropdown (using empty fields between not empty fields)
+// Implement backspase at beginning of line with content after
 // Google Auth
 // Fix disabled buttons onClock handling
 const routes = [

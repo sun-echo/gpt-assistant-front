@@ -250,7 +250,8 @@ const handleBlurInput = (key: number) => {
     !isEmpty(emptyInputs) &&
     isEmpty(value) &&
     inputData.value?.length > 1 &&
-    key !== inputData.value?.length - 1
+    key !== inputData.value?.length - 1 &&
+    activeInputIndex.value !== key
   ) {
     hideTooltip(key)
     inputData.value?.splice(key, 1)
