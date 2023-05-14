@@ -11,9 +11,8 @@ import EditorPage from './components/pages/EditorPage.vue'
 
 
 // TODO: 
-// Imputs удаление и перенос с main
+// Разделение текста при нажатии Enter внутри текста
 // Google Auth
-// Добавтить недостающее добавляет инпут и там ответ
 // Fix disabled buttons onClock handling
 const routes = [
   {
