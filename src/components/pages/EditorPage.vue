@@ -36,7 +36,7 @@
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item disabled>Generate</el-dropdown-item>
-                <el-dropdown-item command="continue">
+                <el-dropdown-item command="continue" :disabled="!promptValue">
                   Continue writing
                 </el-dropdown-item>
                 <el-dropdown-item>
@@ -45,7 +45,7 @@
                 <el-dropdown-item>Overall conclusion</el-dropdown-item>
                 <el-dropdown-item>Check for authenticity</el-dropdown-item>
                 <el-dropdown-item disabled>Import from file</el-dropdown-item>
-                <el-dropdown-item>Import text from media</el-dropdown-item>
+                <el-dropdown-item command="transcribe">Import text from media</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -82,7 +82,7 @@
           </el-button> -->
           <input
             type="file"
-            ref="fileInputElement"
+            ref="file"
             class="file-input"
             @change="uploadFile"
           />
@@ -205,6 +205,7 @@ import {
   nextTick
 } from 'vue'
 import isEmpty from 'lodash/isEmpty'
+import isString from 'lodash/isEmpty'
 import { useStore } from '../../store/index.ts'
 import Header from '../Header.vue'
 import PageWrapper from '../PageWrapper.vue';
@@ -228,13 +229,13 @@ const activeStyle = ref(0)
 const stylizeResult = ref<string|null>(null)
 const loadingStylize = ref(false)
 
-const fileInputElement = ref<HTMLInputElement|null>(null);
+const file = ref<HTMLInputElement|null>(null);
 const fileInputValue = ref<HTMLInputElement|null>(null);
 // const promptInput = ref<HTMLInputElement|null>(null);
 
-// const fileName = computed(() => fileInputValue.value?.name);
-// const fileExtension = computed(() => fileName.value?.substr(fileName.value?.lastIndexOf(".") + 1));
-// const fileMimeType = computed(() => fileInputValue.value?.type);
+const fileName = computed(() => fileInputValue.value?.name);
+const fileExtension = computed(() => fileName.value?.substr(fileName.value?.lastIndexOf(".") + 1));
+const fileMimeType = computed(() => fileInputValue.value?.type);
 // const fileSelected = computed(() => !!fileName.value)
 
 const handleBlurInput = (key: number) => {
@@ -369,19 +370,60 @@ onMounted(() => {
 
 const submitButtonDisabled = computed(() => !promptValue.value || loadingStylize.value)
 
+const handleUploadFile = async () => {
+  console.log('fileName.value', fileName.value)
+  file.value?.click()
+};
+
 const uploadFile = (event: any) => {
   fileInputValue.value = event?.target?.files[0];
+  const reader = new FileReader();
+
+  // @ts-ignore
+  reader.readAsDataURL(fileInputValue.value);
+  reader.onload = async () => {
+    console.log('Reader', reader.result)
+    if (!reader.result) {
+      console.log('Typeof', reader.result)
+      return
+    }
+
+    // @ts-ignore
+    const encodedFile = reader.result?.split(",")[1];
+    const formData = new FormData()
+  
+    // @ts-ignore
+    formData.append('file', file.value?.files?.[0])
+
+    try {
+      const endpoint = 'http://localhost:3000/transcribe';
+
+      const response = await axios.post(endpoint, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      console.log('HhH', response?.data?.text);
+      inputData.value = [...inputData.value, response?.data?.text]
+    } catch (error) {
+      console.error(error);
+    }
+  };
 };
 
 const handleClickAction = async (key: number, comand: string) => {
-  if (!promptValue.value) {
-    return
-  }
-
   loadingInputIndex.value = key
 
   if (comand === 'continue') {
+    if (!promptValue.value) {
+      return
+    }
     await continueWriting(key)
+  }
+
+  if (comand === 'transcribe') {
+    console.log('Transcribe')
+    await handleUploadFile()
   }
 
   loadingInputIndex.value = null
@@ -423,34 +465,6 @@ const handleClickGenerate = async () => {
 const selectStyle = (index: number) => {
   activeStyle.value = index
 }
-
-// const handleUploadFile = async () => {
-//   if (!fileName.value) {
-//     fileInputElement.value?.click()
-//     return
-//   }
-
-//   fileInputValue.value = null
-  
-  // const reader = new FileReader();
-  // reader.readAsDataURL(file.value);
-  // reader.onload = async () => {
-  //   const encodedFile = reader.result.split(",")[1];
-  //   const data = {
-  //     file: encodedFile,
-  //     fileName: fileName.value,
-  //     fileExtension: fileExtension.value,
-  //     fileMimeType: fileMimeType.value,
-  //   };
-  //   try {
-  //     const endpoint = "https://example.com/upload";
-  //     const response = await axios.post(endpoint, data);
-  //     console.log(response.data);
-  //   } catch (error) {
-  //     console.error(error);
-  //   }
-  // };
-// };
 </script>
 
 <style scoped lang="scss">
